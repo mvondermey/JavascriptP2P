@@ -2,16 +2,40 @@
 <html>
     <head>
         <meta charset="utf-8">
+    <style type="text/css">
+    body {
+      background-color: #cde; margin: 0;
+      padding: 0; font: 14px Helvetica, Arial, sans-serif;
+    }
+    div.content {
+      width: 800px; margin: 2em auto; padding: 20px 50px;
+      background-color: #fff; border-radius: 1em;
+    }
+    #messages {
+      border: 2px solid #fec; border-radius: 1em;
+      height: 10em; overflow: scroll; padding: 0.5em 1em;
+    }
+    a:link, a:visited { color: #69c; text-decoration: none; }
+    @media (max-width: 700px) {
+      body { background-color: #fff; }
+      div.content {
+        width: auto; margin: 0 auto; border-radius: 0;
+        padding: 1em;
+      }
+    }
+</style>
         <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
         <script type="text/javascript">
             $(function() {
                 window.WebSocket = window.WebSocket || window.MozWebSocket;
 
-                var websocket = new WebSocket('ws://192.168.7.139:8002',
-                                              'dumb-increment-protocol');
+                var websocket = new WebSocket('ws://192.168.7.139:8002');
 
-                websocket.onopen = function () {
+                if (!window.console) { window.console = { log: function() {} } };
+
+                websocket.onopen = function (ev) {
                     $('h1').css('color', 'green');
+                    console.log(ev);
                 };
 
                 websocket.onerror = function () {
@@ -19,25 +43,75 @@
                 };
 
                 websocket.onmessage = function (message) {
-                    console.log(message.data);
-                    $('div').append($('<p>', { text: message.data }));
+                	//console.log("Message back");
+                    console.log(message);
+                    //
+    			var m = (message.data || '').match(/^(\S+) (.+)/);
+    			if (m[1] == 'id') {
+      				document.getElementById('my_id').innerText = m[2];
+      				$('div').append($('<p>', { text: message.data }));
+    			} else if (m[1] == 'msg') {
+      				var div = document.createElement('div');
+      				div.innerHTML = m[2];
+      				document.getElementById('messages').appendChild(div);
+    			}
+                    //
+                    //$('div').append($('<p>', { text: message.data }));
+                    //
                 };
-                
-
+                //
+                window.onload = function() {
+    				document.getElementById('send_button').onclick = function(ev) {
+      				var msg = document.getElementById('send_input').value;
+      				websocket.send('msg ' + msg);
+    			};
+    			document.getElementById('room_sel').onchange = function(ev) {
+      				var roomName = this.value || '?';
+      				websocket.send('join ' + roomName);
+    			};
+  };
+                /*
                 $('button').click(function(e) {
                     e.preventDefault();
                     websocket.send($('input').val());
                     $('input').val('');
                 });
+                */
             });
         </script>
         </head>
-    <body>
-        <h1>WebSockets test</h1>
-        <form>
-            <input type="text" />
-            <button>Send</button>
-        </form>
-        <div></div>
-    </body>
+ <body>
+  <div class="content">
+    <h1>Websocket PubSub Demonstration</h1>
+
+    <p>
+      This page demonstrates how Mongoose web server could be used to implement
+      <a href="http://en.wikipedia.org/wiki/Publish%E2%80%93subscribe_pattern">
+       publish–subscribe pattern</a>. Open this page in several browser
+       windows. Each window initiates persistent
+       <a href="http://en.wikipedia.org/wiki/WebSocket">WebSocket</a>
+      connection with Mongoose, making each browser window a websocket client.
+      Join a room, send messages, and see messages sent by other clients.
+    </p>
+
+    <p>
+      My ID: <b><span id="my_id"></b></span>
+    </p>
+    <p>
+      Join room: <select id="room_sel">
+        <option value="">-- select room -- </option>
+        <option>A</option>
+        <option>B</option>
+      </select>
+    </p>
+
+    <div id="messages">
+    </div>
+
+    <p>
+      <input type="text" id="send_input" />
+      <button id="send_button">Send Message</button>
+    </p>
+  </div>
+</body>
 </html>
